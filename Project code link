@@ -1,0 +1,169 @@
+import numpy as np
+
+# Abstract Base Class
+class Converter:
+    def convert(self, value, unit1, unit2):
+        raise NotImplementedError("This method must be overridden by subclasses")
+
+# NumPy Utilities
+class NumPyUtils:
+    @staticmethod
+    def perform_np_operations(values):
+        return np.mean(values), np.sum(values), np.product(values)
+
+# Exception Handling Class
+class ExceptionHandler:
+    @staticmethod
+    def handle_error(message):
+        Logger.log_message(f"Error: {message}")
+        print(f"Error: {message}")
+        exit(1)
+
+# Logger Class
+class Logger:
+    @staticmethod
+    def log_message(message):
+        with open("log.txt", "a") as log_file:
+            log_file.write(f"{message}\n")
+
+# History Tracker Class
+class HistoryTracker:
+    def __init__(self):
+        self.history_log = []  # List to store history
+
+    def log_conversion(self, value, unit1, unit2, result):
+        self.history_log.append((value, unit1, unit2, result))
+        Logger.log_message(f"Logged Conversion: {value} {unit1} -> {result} {unit2}")
+
+    def show_history(self):
+        if not self.history_log:
+            print("No conversions performed yet.")
+        else:
+            print("Conversion History:")
+            for value, unit1, unit2, result in self.history_log:
+                print(f"{value} {unit1} -> {result:.2f} {unit2}")
+
+# UnitValidator Class
+class UnitValidator:
+    @staticmethod
+    def validate_units(unit1, unit2, supported_units):
+        if unit1 not in supported_units or unit2 not in supported_units:
+            ExceptionHandler.handle_error(f"Unsupported units. Supported units: {supported_units}")
+
+# InputHandler Class
+class InputHandler:
+    def __init__(self, supported_units):
+        self.supported_units = set(supported_units)
+        self.last_input = None  # Example of using `None`
+
+    def get_input(self):
+        try:
+            value = float(input("Enter the value to convert: "))
+            unit1 = input("Enter the unit to convert from: ").strip().lower()
+            unit2 = input("Enter the unit to convert to: ").strip().lower()
+            self.last_input = (value, unit1, unit2)  # Store input for debugging
+            return value, unit1, unit2
+        except ValueError:
+            ExceptionHandler.handle_error("Invalid numeric input")
+
+# OutputHandler Class
+class OutputHandler:
+    def display_output(self, value, unit1, unit2, result):
+        print(f"{value} {unit1} is equal to {result:.2f} {unit2}")
+
+# LengthConverter Class
+class LengthConverter(Converter):
+    length_units = {
+        "meter": 1.0,
+        "kilometer": 0.001,
+        "mile": 0.000621371,
+    }
+
+    def convert(self, value, unit1, unit2):
+        factor1 = self.length_units[unit1]
+        factor2 = self.length_units[unit2]
+        return value * (factor2 / factor1)
+
+# WeightConverter Class
+class WeightConverter(Converter):
+    weight_units = {
+        "kilogram": 1.0,
+        "gram": 1000.0,
+        "pound": 2.20462,
+    }
+
+    def convert(self, value, unit1, unit2):
+        factor1 = self.weight_units[unit1]
+        factor2 = self.weight_units[unit2]
+        return value * (factor2 / factor1)
+
+# BinaryConverter Class
+class BinaryConverter(Converter):
+    def convert(self, value, unit1, unit2):
+        if unit1 == "decimal" and unit2 == "binary":
+            return bin(int(value))[2:]  # Remove '0b' prefix
+        elif unit1 == "binary" and unit2 == "decimal":
+            return int(value, 2)  # Convert binary string to decimal
+        else:
+            raise ValueError("Unsupported binary conversion")
+
+# CurrencyConverter Class
+class CurrencyConverter(Converter):
+    exchange_rates = {
+        "usd": 1.0,
+        "eur": 0.85,
+        "inr": 74.0,
+    }
+
+    def convert(self, value, unit1, unit2):
+        factor1 = self.exchange_rates[unit1]
+        factor2 = self.exchange_rates[unit2]
+        return value * (factor2 / factor1)
+
+# TemperatureConverter Class
+class TemperatureConverter(Converter):
+    def convert(self, value, unit1, unit2):
+        if unit1 == "celsius" and unit2 == "fahrenheit":
+            return (value * 9 / 5) + 32
+        elif unit1 == "fahrenheit" and unit2 == "celsius":
+            return (value - 32) * 5 / 9
+        else:
+            raise ValueError("Unsupported temperature conversion")
+
+# Main UnitConverter Class
+class UnitConverter:
+    def __init__(self):
+        self.converters = {
+            "length": LengthConverter(),
+            "weight": WeightConverter(),
+            "currency": CurrencyConverter(),
+            "temperature": TemperatureConverter(),
+            "binary": BinaryConverter(),
+        }
+        self.input_handler = InputHandler(
+            ["meter", "kilometer", "mile", "kilogram", "gram", "pound", 
+             "usd", "eur", "inr", "celsius", "fahrenheit", "decimal", "binary"]
+        )
+        self.output_handler = OutputHandler()
+        self.history_tracker = HistoryTracker()
+
+    def start_conversion(self):
+        value, unit1, unit2 = self.input_handler.get_input()
+        UnitValidator.validate_units(unit1, unit2, self.input_handler.supported_units)
+
+        for converter_name, converter in self.converters.items():
+            try:
+                result = converter.convert(value, unit1, unit2)
+                self.output_handler.display_output(value, unit1, unit2, result)
+                self.history_tracker.log_conversion(value, unit1, unit2, result)
+                return
+            except KeyError:
+                continue
+
+        ExceptionHandler.handle_error("No suitable converter found")
+
+# Run the application
+if __name__ == "__main__":
+    unit_converter = UnitConverter()
+    unit_converter.start_conversion()
+    unit_converter.history_tracker.show_history()
